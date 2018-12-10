@@ -1,0 +1,11 @@
+server:
+  port: 8100
+spring:
+  application:
+    name: cms-eureka
+  profiles:
+    active: dev
+  security:
+    user:
+      name: admin
+      password: admin

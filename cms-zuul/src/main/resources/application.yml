@@ -1,0 +1,7 @@
+server:
+  port: 8200
+spring:
+  application:
+    name: cms-zuul
+  profiles:
+    active: dev
