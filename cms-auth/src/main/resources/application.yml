@@ -1,0 +1,9 @@
+server:
+  port: 8300
+spring:
+  application:
+    name: cms-auth
+  redis:
+    database: 0
+    host: 192.168.60.128
+    port: 6379

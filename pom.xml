@@ -12,6 +12,7 @@
     <modules>
         <module>cms-eureka</module>
         <module>cms-zuul</module>
+        <module>cms-auth</module>
     </modules>
 
     <parent>
