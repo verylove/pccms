@@ -1,0 +1,5 @@
+spring:
+  data:
+    elasticsearch:
+      cluster-name: elasticsearch
+      cluster-nodes: 118.25.227.125:9300 # 多台机器用,分割

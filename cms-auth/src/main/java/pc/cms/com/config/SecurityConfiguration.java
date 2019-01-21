@@ -1,10 +1,14 @@
 package pc.cms.com.config;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.core.userdetails.User;
@@ -14,6 +18,8 @@ import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import pc.cms.com.service.CustomUserDetailsService;
+import pc.cms.com.service.impl.UsersServiceImpl;
 
 /**
  * @Author 彭铖
@@ -25,78 +31,62 @@ import org.springframework.security.provisioning.InMemoryUserDetailsManager;
  * 具体的实现类可以使用JdbcDaoImpl或者JdbcUserDetailsManager。
  * @return
  **/
+//sercurity安全配置
 @Configuration
 @EnableWebSecurity
 public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
+    @Autowired
+    private CustomUserDetailsService customUserDetailsService;
 
 
-//    @Override
-//    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-//        auth.inMemoryAuthentication().passwordEncoder(new BCryptPasswordEncoder());
-//    }
-
-
-    @Bean
+    /**
+     * 拦截配置
+     *
+     * @param http
+     * @throws Exception
+     */
     @Override
-    protected UserDetailsService userDetailsService(){
-        BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder();
-//        password 方案一：明文存储，用于测试，不能用于生产
-//        String finalPassword = "123456";
-//        password 方案二：用 BCrypt 对密码编码
-//        String finalPassword = bCryptPasswordEncoder.encode("123456");
-        // password 方案三：支持多种编码，通过密码的前缀区分编码方式
-        String finalPassword = "{bcrypt}"+bCryptPasswordEncoder.encode("123456");
+    protected void configure(HttpSecurity http) throws Exception {
+        //关闭csrf，拦截所有请求
+        http.csrf().disable()
+                .authorizeRequests()
+                .antMatchers("/oauth/remove_token").permitAll()
+                .anyRequest().authenticated();
+    }
 
-        InMemoryUserDetailsManager manager = new InMemoryUserDetailsManager();
-        manager.createUser(User.withUsername("user_1").password(finalPassword).authorities("USER").build());
-        manager.createUser(User.withUsername("user_2").password(finalPassword).authorities("USER").build());
-        return manager;
+    @Override
+    public void configure(WebSecurity web) throws Exception {
+        web.ignoring()
+                .antMatchers("/favor.ico");
+    }
+
+    @Override
+    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+        //替换成自己验证规则
+        //auth.userDetailsService(customUserDetailsService).passwordEncoder(passwordEncoder());
+        auth.authenticationProvider(authenticationProvider());
     }
 
     /**
-     * springboot2.0 删除了原来的 plainTextPasswordEncoder
-     * https://docs.spring.io/spring-security/site/docs/5.0.4.RELEASE/reference/htmlsingle/#10.3.2 DelegatingPasswordEncoder
-     *
+     * password 验证需要设置
      */
-
-
-    // password 方案一：明文存储，用于测试，不能用于生产
-//    @Bean
-//    PasswordEncoder passwordEncoder(){
-//        return NoOpPasswordEncoder.getInstance();
-//    }
-
-    // password 方案二：用 BCrypt 对密码编码
-//    @Bean
-//    PasswordEncoder passwordEncoder(){
-//        return new BCryptPasswordEncoder();
-//    }
-
-    // password 方案三：支持多种编码，通过密码的前缀区分编码方式,推荐
-    @Bean
-    PasswordEncoder passwordEncoder(){
-        return PasswordEncoderFactories.createDelegatingPasswordEncoder();
-    }
-
-    //
-//    /**
-//     * 这一步的配置是必不可少的，否则SpringBoot会自动配置一个AuthenticationManager,覆盖掉内存中的用户
-//     */
-    @Bean
     @Override
+    @Bean
     public AuthenticationManager authenticationManagerBean() throws Exception {
-        AuthenticationManager manager = super.authenticationManagerBean();
-        return manager;
+        return super.authenticationManagerBean();
     }
 
-    @Override
-    protected void configure(HttpSecurity http) throws Exception {
-        // @formatter:off
-        http
-                .requestMatchers().anyRequest()
-                .and()
-                .authorizeRequests()
-                .antMatchers("/oauth/**").permitAll();
-        // @formatter:on
+    @Bean
+    public static BCryptPasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public AuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setUserDetailsService(customUserDetailsService);
+        provider.setPasswordEncoder(passwordEncoder());
+        provider.setHideUserNotFoundExceptions(false);
+        return provider;
     }
 }
